@@ -1,7 +1,8 @@
 <script>
 //create reactive state
-	let count = 0;
-	let savedCounts = [];
+	let count = 0; 
+	let savedCounts = [];  //array
+	let doubleClick = false; //boolean
 
 	function reset() {
 		count = 0;
@@ -10,11 +11,21 @@
 	function saveCount() {
 		savedCounts = [...savedCounts, count];
 		console.log("Saved count:", savedCounts);
+		count = 0;
+	}
+
+	function clickDown() {
+		count += doubleClick ? 2 : 1;
+	}
+
+	function getDoubleCount() {
+		doubleClick = !doubleClick;
+		console.log("Double click is now", doubleClick ? "ON" : "OFF")
 	}
 </script>
 
-<button on:click={() => count++}>
-	count is {count}
+<button on:click={clickDown} on:dblclick={getDoubleCount} style="cursor: pointer;">
+	count is {count} {#if doubleClick}(x2){/if}
 </button>
 
 <button on:click={reset}>
@@ -22,7 +33,7 @@
 </button>
 
 <button on:click={saveCount}>
-	saved count
+	save count
 </button>
 
 {#if savedCounts !== null}
