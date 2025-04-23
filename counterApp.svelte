@@ -1,8 +1,10 @@
 <script>
 //create reactive state
-	let count = 0; 
-	let savedCounts = [];  //array
+	let count = 0;
+	let savedCounts = []; //array
 	let doubleClick = false; //boolean
+	let showModal = false; //boolean
+	let modalMessage = ""; //string
 
 	function reset() {
 		count = 0;
@@ -20,9 +22,20 @@
 
 	function getDoubleCount() {
 		doubleClick = !doubleClick;
-		console.log("Double click is now", doubleClick ? "ON" : "OFF")
+		console.log()
+		modalMessage = `Double click is now ${doubleClick ? 'ON' : 'OFF'}`
+		showModal = true;
+
+		//hide modal after 1.5 seconds
+		setTimeout(() => {
+			showModal = false;
+		},1500);
 	}
+
 </script>
+{#if showModal}
+	<div class="modal">{modalMessage}</div>
+{/if}
 
 <button on:click={clickDown} on:dblclick={getDoubleCount} style="cursor: pointer;">
 	count is {count} {#if doubleClick}(x2){/if}
@@ -37,9 +50,22 @@
 </button>
 
 {#if savedCounts !== null}
-	<p style="margin: o;">Saved counts: {savedCounts.join(" - ")}</p>
+	<p style="margin: 0;">Saved counts: {savedCounts.join(" - ")}</p>
 {/if}
 <style>
+	.modal{
+		position: fixed;
+		top: 20px;
+		left: 50%;
+		transform: translateX(-50%);
+		background-color: grey;
+		color: white;
+		padding: 1rem 2rem;
+		border-radius: 10px;
+		box-shadow: 0 2px 8px black; //nmake the color 20% opacity
+		font-weight: bold;
+		z-index: 1000;
+	}
 	button:hover{
 		background-color: red;
 		margin: 0;
@@ -51,6 +77,7 @@
 	}
 	
 </style>
+
 
 
 /*
