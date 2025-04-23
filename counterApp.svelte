@@ -1,39 +1,45 @@
 <script>
-//create reactive state
-	let count = 0;
-	let savedCounts = []; //array
-	let lastSavedCount = false; //boolean
+	//import stored state
+	import { countStore, savedCountsStore, lastSavedCountStore, doubleClickStore } from "./store";
+	import { get } from 'svelte/store';
 	
-	let doubleClick = false; //boolean
+//uncreate reactive state
 	let showModal = false; //boolean
 	let modalMessage = ""; //string
 
 	function reset() {
 		//capture before reseting
-		lastSavedCount = count;
-		count = 0;
+		lastSavedCountStore.set(get(countStore));
+		countStore.set(0);
 	}
 
 	function saveCount() {
-		savedCounts = [...savedCounts, count];
-		console.log("Saved count:", savedCounts);
-		count = 0;
+		const current = get(countStore);
+		savedCountsStore.update( arr => [...arr, current]);
+		console.log("Saved count:", get(savedCountsStore));
+			// count = 0;
 	}
 
 	function clickDown() {
-		count += doubleClick ? 2 : 1;
+		doubleClickStore.update(double => {
+				countStore.update(c => c + (double ? 2 : 1));
+				return double
+			});
 	}
 
 	function getDoubleCount() {
-		doubleClick = !doubleClick;
-		console.log()
-		modalMessage = `Double click is now ${doubleClick ? 'ON' : 'OFF'}`
-		showModal = true;
+		doubleClickStore.update(double => {
+				const newState = !doubleClick;
+				console.log()
+				modalMessage = `Double click is now ${newState ? 'ON' : 'OFF'}`
+				showModal = true;
 
-		//hide modal after 1.5 seconds
-		setTimeout(() => {
-			showModal = false;
-		},1500);
+				//hide modal after 1.5 seconds
+				setTimeout(() => {
+				showModal = false;
+				},1500);
+				return newState;
+		});
 	}
 
 </script>
@@ -42,7 +48,7 @@
 {/if}
 
 <button on:click={clickDown} on:dblclick={getDoubleCount} style="cursor: pointer;">
-	count is {count} {#if doubleClick}(x2){/if}
+	count is {$countStore} {#if $doubleClickStore}(x2){/if}
 </button>
 
 <button on:click={reset}>
@@ -53,13 +59,13 @@
 	save count
 </button>
 
-{#if savedCounts !== null}
-	<p style="margin: 0;">Saved counts: {savedCounts.join(" - ")}</p>
+{#if $savedCountsStore !== null}
+	<p style="margin: 0;">Saved counts: {$savedCountsStore.join(" - ")}</p>
 {/if}
 
 
-{#if lastSavedCount !== null}
-	<p style="margin: 0;">Last saved counts: {lastSavedCount}</p>
+{#if typeof $lastSavedCountStore === 'number'}
+	<p style="margin: 0;">Last saved counts: {$lastSavedCountStore}</p>
 {/if}
 <style>
 	.modal{
