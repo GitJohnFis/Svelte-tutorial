@@ -2,11 +2,15 @@
 //create reactive state
 	let count = 0;
 	let savedCounts = []; //array
+	let lastSavedCount = false; //boolean
+	
 	let doubleClick = false; //boolean
 	let showModal = false; //boolean
 	let modalMessage = ""; //string
 
 	function reset() {
+		//capture before reseting
+		lastSavedCount = count;
 		count = 0;
 	}
 
@@ -52,6 +56,11 @@
 {#if savedCounts !== null}
 	<p style="margin: 0;">Saved counts: {savedCounts.join(" - ")}</p>
 {/if}
+
+
+{#if lastSavedCount !== null}
+	<p style="margin: 0;">Last saved counts: {lastSavedCount}</p>
+{/if}
 <style>
 	.modal{
 		position: fixed;
@@ -62,7 +71,7 @@
 		color: white;
 		padding: 1rem 2rem;
 		border-radius: 10px;
-		box-shadow: 0 2px 8px black; //nmake the color 20% opacity
+		box-shadow: 0 2px 8px black; // make the color 20% opacity
 		font-weight: bold;
 		z-index: 1000;
 	}
@@ -77,7 +86,6 @@
 	}
 	
 </style>
-
 
 
 /*
