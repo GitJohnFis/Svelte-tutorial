@@ -1,15 +1,15 @@
 <script>
 //create reactive state
 	let count = 0;
-	let savedCount = null;
+	let savedCounts = [];
 
 	function reset() {
 		count = 0;
 	}
 
 	function saveCount() {
-		savedCount = count;
-		console.log("Saved count:", savedCount);
+		savedCounts = [...savedCounts, count];
+		console.log("Saved count:", savedCounts);
 	}
 </script>
 
@@ -25,8 +25,8 @@
 	saved count
 </button>
 
-{#if savedCount !== null}
-	<p>Last saved count: {savedCount}</p>
+{#if savedCounts !== null}
+	<p style="margin: o;">Saved counts: {savedCounts.join(" - ")}</p>
 {/if}
 <style>
 	button:hover{
@@ -40,6 +40,7 @@
 	}
 	
 </style>
+
 
 /*
 
