@@ -1,11 +1,25 @@
 <script>
 //create reactive state
-let count = 0;
+	let count = 0;
+
+	function reset() {
+		count = 0;
+	}
 </script>
 
 <button on:click={() => count++}>
-count is {count}
+	count is {count}
 </button>
+
+<button on:click={reset}>
+		reset
+</button>
+<style>
+	button:hover{
+		background-color: red;
+		margin: 0;
+	}
+</style>
 
 /*
 
