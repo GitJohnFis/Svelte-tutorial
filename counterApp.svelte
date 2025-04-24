@@ -102,9 +102,11 @@ $: document.title = `Count: ${countStore}`;
 	<div class="modal">{modalMessage}</div>
 {/if}
 
-<button on:click={clickDown} on:dblclick={getDoubleCount} style="cursor: pointer;">
-	count is {$countStore} {#if $doubleClickStore}(x2){/if}
+<button on:click={clickDown} on:dblclick={getDoubleCount} style="cursor: pointer; color: white; background-color: {$doubleClickStore ? 'blue' : 'navy'}; transition: background-color 0.3s ease; border-radius: 6px;">
+	Count 
 </button>
+	<!-- Show the number seperately -->
+	<p> {$countStore} </p>
 
 <button on:click={reset}>
 		reset
@@ -174,7 +176,6 @@ $: document.title = `Count: ${countStore}`;
 	}
 	
 </style>
-
 
 
 
