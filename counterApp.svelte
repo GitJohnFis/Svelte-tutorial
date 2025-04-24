@@ -126,7 +126,7 @@ $: document.title = `Count: ${countStore}`;
 	<p style="text-align: center;">❌ App failed to load.</p>
 	<p style="text-align: center;">Error: ${error.message}</p>
 		 <p style="text-align: center;">Status: {status}</p>
-<button on:click={retryStartup} style="align-items: center;">🔄 Try again</button>
+<button on:click={retryStartup} style="display: block; margin: 2rem auto; align-items: center; justify-content: center; align-items: center; background-color: #007bff; color: white;" on:mouseover={e =>  e.target.style.backgroundColor = '#0056b3'} on:mouseout={e => e.target.style.backgroundColor = '#007bff'} on:focus{} on:blur{}>🔄 Try again</button>
 {/await} 
 
 <style>
