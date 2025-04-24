@@ -1,5 +1,3 @@
-
-
 <script>
 	//import stored state
 	import { countStore, savedCountsStore, lastSavedCountStore, doubleClickStore } from "./store";
@@ -26,7 +24,7 @@
 	function clickDown() {
 		doubleClickStore.update(double => {
 				countStore.update(c => c + (double ? 2 : 1));
-				return double
+				return double;
 			});
 	}
 
@@ -63,7 +61,7 @@
 </script>
 {#await startupPromise}
 	<p style="display: flex; justify-content: center; align-items: center; height: 100vh;
-						width: 100vw; font-size: 1.5rem;">⏳ Loading counter app...</p>
+						width: 100vw; font-size: 1.5rem;"><span class="spinner-animation">⏳</span> Loading counter app...</p>
 {:then status}
 	
 <!-- App only renders after promise resolves -->
@@ -110,6 +108,26 @@
 		font-weight: bold;
 		z-index: 1000;
 	}
+	/*
+	fallback incase the emoji does not load
+	.loader {
+  border: 4px solid #ccc;
+  border-top: 4px solid #333;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 0.8s linear infinite;
+} */
+	:global(.spinner-animation){
+		display: inline-block;
+		animation: spin 1s linear infinite;
+		transform-orgin: center;
+		margin-right: 0.5rem;
+	}
+	@keyframes spin{
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
+	}
 	button:hover{
 		background-color: red;
 		margin: 0;
@@ -121,6 +139,7 @@
 	}
 	
 </style>
+
 
 
 
