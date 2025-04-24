@@ -1,11 +1,16 @@
+
+
 <script>
 	//import stored state
 	import { countStore, savedCountsStore, lastSavedCountStore, doubleClickStore } from "./store";
 	import { get } from 'svelte/store';
+	import { onMount } from 'svelte';
 	
 //uncreate reactive state
 	let showModal = false; //boolean
 	let modalMessage = ""; //string
+	let loading = true;
+	let startupPromise;
 
 	
 	function reset() {
@@ -30,7 +35,7 @@
 
 	function getDoubleCount() {
 		doubleClickStore.update(double => {
-				const newState = !doubleClick;
+				const newState = !double;
 				console.log()
 				modalMessage = `Double click is now ${newState ? 'ON' : 'OFF'}`
 				showModal = true;
@@ -43,12 +48,18 @@
 		});
 	}
 	
+//mount and initialize
+	 onMount(() => {
+		const startupPromise = new Promise((resolve) => {
+		const timer = setTimeout(() => { 
+		loading = false; 
+
 // simulated app initialization (1.5s delay)
-	 const startupPromise = new Promise((resolve) => {
-	 	setTimeout(() => { 
-			resolve('ready');
+		 resolve('✅ ready');
 	 	}, 1500);
+		return () => clearTimeout(timer);
 	});
+	 });
 	
 	// Simulated promise (e.g., API call or setup process)
 	// const startupPromise = new Promise((resolve) => {
