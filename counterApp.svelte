@@ -1,3 +1,5 @@
+
+
 <script>
 	//import stored state
 	import { countStore, savedCountsStore, lastSavedCountStore, doubleClickStore } from "./store";
@@ -7,6 +9,7 @@
 	let showModal = false; //boolean
 	let modalMessage = ""; //string
 
+	
 	function reset() {
 		//capture before reseting
 		lastSavedCountStore.set(get(countStore));
@@ -41,8 +44,29 @@
 				return newState;
 		});
 	}
+	
+// simulated app initialization (1.5s delay)
+	 const startupPromise = new Promise((resolve) => {
+	 	setTimeout(() => { 
+			resolve('ready');
+	 	}, 1500);
+	});
+	
+	// Simulated promise (e.g., API call or setup process)
+	// const startupPromise = new Promise((resolve) => {
+	// 	setTimeout(() => {
+	// 		resolve('ready'); // could be data too
+	// 	}, 3000); // 3 second fake delay
+	//  });
 
+	
 </script>
+{#await startupPromise}
+	<p style="display: flex; justify-content: center; align-items: center; height: 100vh;
+						width: 100vw; font-size: 1.5rem;">⏳ Loading counter app...</p>
+{:then status}
+	
+<!-- App only renders after promise resolves -->
 {#if showModal}
 	<div class="modal">{modalMessage}</div>
 {/if}
@@ -67,6 +91,11 @@
 {#if typeof $lastSavedCountStore === 'number'}
 	<p style="margin: 0;">Last saved counts: {$lastSavedCountStore}</p>
 {/if}
+	
+		 <h2>✅ App is {status}</h2>
+
+{/await} 
+
 <style>
 	.modal{
 		position: fixed;
@@ -92,6 +121,7 @@
 	}
 	
 </style>
+
 
 
 /*
