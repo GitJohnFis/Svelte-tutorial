@@ -1,17 +1,18 @@
-
-
 <script>
-	//import stored state
+	//import stored state	
+	import { onMount } from 'svelte';
 	import { countStore, savedCountsStore, lastSavedCountStore, doubleClickStore } from "./store";
 	import { get } from 'svelte/store';
-	import { onMount } from 'svelte';
+
 	
 //uncreate reactive state
 	let showModal = false; //boolean
 	let modalMessage = ""; //string
 	let loading = true;
+	let status = 'Initializing...';
 	let startupPromise;
-
+// reactively lets you use $countStore
+$: document.title = `Count: ${countStore}`;
 	
 	function reset() {
 		//capture before reseting
@@ -48,18 +49,38 @@
 		});
 	}
 	
-//mount and initialize
-	 onMount(() => {
-		const startupPromise = new Promise((resolve) => {
-		const timer = setTimeout(() => { 
-		loading = false; 
-
-// simulated app initialization (1.5s delay)
-		 resolve('✅ ready');
-	 	}, 1500);
+//function to initialize app with simulated delay + error chance
+	 
+		function initiateApp() {
+			startupPromise = new Promise((resolve, reject) => {
+			const timer = setTimeout(() => {
+				const shouldFail = Math.random() > 0.3;
+				if(shouldFail){
+					status = '❌ Not Ready';
+					reject(new Error('Failed to initialize'));
+				} else {
+					loading = false;
+				status = '✅ Ready';
+				// simulated app initialization (1.5s delay)
+				resolve(status);
+				}	
+			}, 1500);
+	
 		return () => clearTimeout(timer);
-	});
+			
+		});
+		}
+	
+	onMount(() => {
+		 initiateApp();
 	 });
+// retry mechanism
+	function retryStartup() {
+		loading = true;
+		status = '⏳ Retrying...';
+		initiateApp();
+	}
+
 	
 	// Simulated promise (e.g., API call or setup process)
 	// const startupPromise = new Promise((resolve) => {
@@ -67,6 +88,7 @@
 	// 		resolve('ready'); // could be data too
 	// 	}, 3000); // 3 second fake delay
 	//  });
+	
 
 	
 </script>
@@ -100,9 +122,11 @@
 {#if typeof $lastSavedCountStore === 'number'}
 	<p style="margin: 0;">Last saved counts: {$lastSavedCountStore}</p>
 {/if}
-	
-		 <h2>✅ App is {status}</h2>
-
+{:catch error}
+	<p style="text-align: center;">❌ App failed to load.</p>
+	<p style="text-align: center;">Error: ${error.message}</p>
+		 <p style="text-align: center;">Status: {status}</p>
+<button on:click={retryStartup} style="align-items: center;">🔄 Try again</button>
 {/await} 
 
 <style>
@@ -150,6 +174,7 @@
 	}
 	
 </style>
+
 
 
 
