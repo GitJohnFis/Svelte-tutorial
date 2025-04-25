@@ -1,54 +1,45 @@
 <script>
 	//import stored state	
-	import { onMount } from 'svelte';
-	import { countStore, savedCountsStore, lastSavedCountStore, doubleClickStore } from "./store";
-	import { get } from 'svelte/store';
+	import { onMount, derived } from 'svelte';
+	import { countStore, savedCountsStore, lastSavedCountStore } from "./store";
+	import CountButton  from './Countbutton.svelte';
+	import { get, derived as svelteDerived } from 'svelte/store';
 
-	
 //uncreate reactive state
+		// create a analytics tab
+	let activeTab = 'counter';
 	let showModal = false; //boolean
 	let modalMessage = ""; //string
 	let loading = true;
 	let status = 'Initializing...';
 	let startupPromise;
+	// random fidget
+	// let m = { x: 0, y: 0 };
+	//  onpointermove={(event) => {
+	// m.x = event.clientX;
+	// m.y = event.clientY;
+	// }}
 // reactively lets you use $countStore
-$: document.title = `Count: ${countStore}`;
+  $: document.title = `Count: ${countStore}`;
 	
-	function reset() {
-		//capture before reseting
-		lastSavedCountStore.set(get(countStore));
-		countStore.set(0);
-	}
+
 
 	function saveCount() {
 		const current = get(countStore);
 		savedCountsStore.update( arr => [...arr, current]);
 		console.log("Saved count:", get(savedCountsStore));
 			// count = 0;
+		reset();
+		// lastSavedCountStore.set(current);
+
+		// countStore.set(0);
 	}
 
-	function clickDown() {
-		doubleClickStore.update(double => {
-				countStore.update(c => c + (double ? 2 : 1));
-				return double;
-			});
-	}
-
-	function getDoubleCount() {
-		doubleClickStore.update(double => {
-				const newState = !double;
-				console.log()
-				modalMessage = `Double click is now ${newState ? 'ON' : 'OFF'}`
-				showModal = true;
-
-				//hide modal after 1.5 seconds
-				setTimeout(() => {
-				showModal = false;
-				},1500);
-				return newState;
-		});
-	}
-	
+	function reset() {
+		//capture before reseting
+		lastSavedCountStore.set(get(countStore));
+		countStore.set(0);
+	}	
 //function to initialize app with simulated delay + error chance
 	 
 		function initiateApp() {
@@ -88,7 +79,10 @@ $: document.title = `Count: ${countStore}`;
 	// 		resolve('ready'); // could be data too
 	// 	}, 3000); // 3 second fake delay
 	//  });
-	
+	const total = svelteDerived(savedCountsStore, $counts => $counts.length);
+	const average = svelteDerived(savedCountsStore, $counts => $counts.length ? ($counts.reduce((a, b) => a + b, 0) / $counts.length).toFixed(2) : 0);
+	const max = svelteDerived(savedCountsStore, $counts => $counts.length ? Math.max(...$counts) : 0);
+	const min = svelteDerived(savedCountsStore, $counts => $counts.length ? Math.max(...$counts) : 0);
 
 	
 </script>
@@ -96,26 +90,37 @@ $: document.title = `Count: ${countStore}`;
 	<p style="display: flex; justify-content: center; align-items: center; height: 100vh;
 						width: 100vw; font-size: 1.5rem;"><span class="spinner-animation">⏳</span> Loading counter app...</p>
 {:then status}
-	
-<!-- App only renders after promise resolves -->
+	<div style="margin-bottom: 1rem;">
+	<button on:click={() => activeTab = 'counter'} class:active={activeTab === 'counter'} style="padding: 0.5rem 1rem; margin-right: 0.5rem; border: none; background-color: {activeTab === 'counter' ? 'steelblue' : 'lightgray'}; color: {activeTab === 'counter' ? 'white' : 'black'}; cursor: pointer; border-radius: 6px;">Counter</button>
+	<button on:click={() => activeTab = 'stats'} class:active={activeTab === 'stats'} style="padding: 0.5rem 1rem; margin-right: 0.5rem; border: none; background-color: {activeTab === 'stats' ? 'steelblue' : 'lightgray'}; color: {activeTab === 'stats' ? 'white' : 'black'}; cursor: pointer; border-radius: 6px;">Stats</button>
+	</div>
+	<!-- App only renders after promise resolves -->
 {#if showModal}
 	<div class="modal">{modalMessage}</div>
 {/if}
+	<!--The pointer is at {Math.round(m.x)} x {Math.round(m.y)}-->
 
-<button on:click={clickDown} on:dblclick={getDoubleCount} style="cursor: pointer; color: white; background-color: {$doubleClickStore ? 'blue' : 'navy'}; transition: background-color 0.3s ease; border-radius: 6px;">
-	Count 
-</button>
-	<!-- Show the number seperately -->
-	<p> {$countStore} </p>
+	{#if activeTab === 'counter'}
+<CountButton label="Count"
+	on:toggle={e => {
+		modalMessage = e.detail.message;
+		showModal = true;
 
-<button on:click={reset}>
+		setTimeout(() => {
+			showModal = false;
+		}, 1500);
+	}}
+		
+	}}/> 
+	<button on:click={reset}>
 		reset
-</button>
+ </button>
 
 <button on:click={saveCount}>
 	save count
 </button>
 
+	
 {#if $savedCountsStore !== null}
 	<p style="margin: 0;">Saved counts: {$savedCountsStore.join(" - ")}</p>
 {/if}
@@ -124,11 +129,23 @@ $: document.title = `Count: ${countStore}`;
 {#if typeof $lastSavedCountStore === 'number'}
 	<p style="margin: 0;">Last saved counts: {$lastSavedCountStore}</p>
 {/if}
+		
+	{:else if activeTab === 'stats'}
+		<h2>Analytics</h2>
+		<p>Total saved: {$total}</p>
+		<p>Average: {$average}</p>
+		<p>max: {$max}</p>
+		<p>min: {$min}</p>
+		<button on:click={() => savedCountsStore.set([])}>Clear Saved Counts</button>
+	{/if}
+<!-- <div onkeydowncapture={(e) => alert(`<div> ${e.key}`)} role="presentation">
+	<input onkeydowncapture={(e) => alert(`<input> ${e.key}`)} />
+</div> -->
 {:catch error}
 	<p style="text-align: center;">❌ App failed to load.</p>
 	<p style="text-align: center;">Error: ${error.message}</p>
-		 <p style="text-align: center;">Status: {status}</p>
-<button on:click={retryStartup} style="display: block; margin: 2rem auto; align-items: center; justify-content: center; align-items: center; background-color: #007bff; color: white;" on:mouseover={e =>  e.target.style.backgroundColor = '#0056b3'} on:mouseout={e => e.target.style.backgroundColor = '#007bff'} on:focus{} on:blur{}>🔄 Try again</button>
+	<p style="text-align: center;">Status: {status}</p>
+	<button on:click={retryStartup} style="display: block; margin: 2rem auto; align-items: center; justify-content: center; align-items: center; background-color: #007bff; color: white;" on:mouseover={e =>  e.target.style.backgroundColor = '#0056b3'} on:mouseout={e => e.target.style.backgroundColor = '#007bff'} on:focus{} on:blur{}>🔄 Try again</button>
 {/await} 
 
 <style>
@@ -145,6 +162,11 @@ $: document.title = `Count: ${countStore}`;
 		font-weight: bold;
 		z-index: 1000;
 	}
+
+	.tabs button.active {
+    background-color: steelblue;
+    color: white;
+  }
 	/*
 	fallback incase the emoji does not load
 	.loader {
@@ -176,7 +198,6 @@ $: document.title = `Count: ${countStore}`;
 	}
 	
 </style>
-
 
 
 
