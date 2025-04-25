@@ -1,10 +1,12 @@
 <script>
 	//import stored state	
 	import { onMount, derived } from 'svelte';
-	import { countStore, savedCountsStore, lastSavedCountStore } from "./store";
+	import { countStore, savedCountsStore, lastSavedCountStore, themeColor } from "./store";
 	import CountButton  from './Countbutton.svelte';
-	import { get, derived as svelteDerived } from 'svelte/store';
-
+	import { get, writable, derived as svelteDerived } from 'svelte/store';
+  import { countStep, doubleClickEnabled, resetSettings  } from './settings.js';
+	import ThemeColors from './ThemeColors.svelte';
+	//import settings app js file
 //uncreate reactive state
 		// create a analytics tab
 	let activeTab = 'counter';
@@ -19,9 +21,10 @@
 	// m.x = event.clientX;
 	// m.y = event.clientY;
 	// }}
+	
 // reactively lets you use $countStore
   $: document.title = `Count: ${countStore}`;
-	
+	$: currentThemeColor = $themeColor;
 
 
 	function saveCount() {
@@ -40,6 +43,14 @@
 		lastSavedCountStore.set(get(countStore));
 		countStore.set(0);
 	}	
+
+	function updateCount() {
+		const step = get(countStep);
+		const isDbl = get(doubleClickEnabled);
+		
+		// Update the count based on the step and double count setting
+		countStore.update(c => c + (isDbl ? step * 2 : step));
+	}
 //function to initialize app with simulated delay + error chance
 	 
 		function initiateApp() {
@@ -90,9 +101,12 @@
 	<p style="display: flex; justify-content: center; align-items: center; height: 100vh;
 						width: 100vw; font-size: 1.5rem;"><span class="spinner-animation">⏳</span> Loading counter app...</p>
 {:then status}
-	<div style="margin-bottom: 1rem;">
+	<ThemeColors />
+	<div style="color: var(--theme-text); background-color: var(--theme-bg); min-height: 100vh;">
+	<div style="margin-bottom: 1rem; ">
 	<button on:click={() => activeTab = 'counter'} class:active={activeTab === 'counter'} style="padding: 0.5rem 1rem; margin-right: 0.5rem; border: none; background-color: {activeTab === 'counter' ? 'steelblue' : 'lightgray'}; color: {activeTab === 'counter' ? 'white' : 'black'}; cursor: pointer; border-radius: 6px;">Counter</button>
 	<button on:click={() => activeTab = 'stats'} class:active={activeTab === 'stats'} style="padding: 0.5rem 1rem; margin-right: 0.5rem; border: none; background-color: {activeTab === 'stats' ? 'steelblue' : 'lightgray'}; color: {activeTab === 'stats' ? 'white' : 'black'}; cursor: pointer; border-radius: 6px;">Stats</button>
+		<button on:click={() => activeTab = 'settings'} class:active={activeTab === 'settings'} style="padding: 0.5rem 1rem; margin-right: 0.5rem; border: none; background-color: {activeTab === 'settings' ? 'steelblue' : 'lightgray'}; color: {activeTab === 'settings' ? 'white' : 'black'}; cursor: pointer; border-radius: 6px;">⚙️Settings</button>
 	</div>
 	<!-- App only renders after promise resolves -->
 {#if showModal}
@@ -102,6 +116,7 @@
 
 	{#if activeTab === 'counter'}
 <CountButton label="Count"
+	on:click={updateCount}
 	on:toggle={e => {
 		modalMessage = e.detail.message;
 		showModal = true;
@@ -112,11 +127,11 @@
 	}}
 		
 	}}/> 
-	<button on:click={reset}>
+	<button on:click={reset} style="background-color: var(--theme-button-hover); color: var(--theme-text);">
 		reset
  </button>
 
-<button on:click={saveCount}>
+<button on:click={saveCount} style="background-color: var(--theme-button-hover); color: var(--theme-text);">
 	save count
 </button>
 
@@ -129,7 +144,7 @@
 {#if typeof $lastSavedCountStore === 'number'}
 	<p style="margin: 0;">Last saved counts: {$lastSavedCountStore}</p>
 {/if}
-		
+	
 	{:else if activeTab === 'stats'}
 		<h2>Analytics</h2>
 		<p>Total saved: {$total}</p>
@@ -137,7 +152,32 @@
 		<p>max: {$max}</p>
 		<p>min: {$min}</p>
 		<button on:click={() => savedCountsStore.set([])}>Clear Saved Counts</button>
+
+		{:else if activeTab === 'settings'}
+		<h2>Settings</h2>
+		<p>Here you can configure app settings</p>
+		<div style="margin-bottom: 1rem;">
+		<label for="countStep">Count Step:</label>
+      <input id="countStep" type="number" min="1" max="10" bind:value={$countStep} />
+      	<p>Adjust the step value for count increments.</p>
+		</div>
+		<div style="margin-bottom: 1rem;">
+			<label for="themeColor">Theme Color:</label>
+      <input id="themeColor" type="color" bind:value={$themeColor} />
+		<p>Change the theme color of the app.</p>
+		</div>
+		<div style="margin-bottom: 1rem;">
+		<label for="doubleClickEnabled">Enable double count:</label>
+		<input type="checkbox" id="doubleCount" bind:checked={$doubleClickEnabled} />
+		 	<p>Toggle to enable or disable double counting.</p>
+		</div>
+	<div style="margin-top: 2rem;">
+		<button on:click={resetSettings} style="align-items: center;" >
+			🔄 reset settings
+		</button>
+	</div>
 	{/if}
+	</div>
 <!-- <div onkeydowncapture={(e) => alert(`<div> ${e.key}`)} role="presentation">
 	<input onkeydowncapture={(e) => alert(`<input> ${e.key}`)} />
 </div> -->
@@ -188,7 +228,7 @@
 		100% { transform: rotate(360deg); }
 	}
 	button:hover{
-		background-color: red;
+		background-color: var(--theme-button-hover);
 		margin: 0;
 		gap: 1;
 	}
@@ -196,9 +236,13 @@
 		color: black;
 		font-weight: bold;
 	}
-	
+	:root{
+		--theme-bg: white;
+		--theme-text: #000000;
+		--theme-button: #007bff;
+		--theme-button-hover: #0056b3;
+	}
 </style>
-
 
 
 /*
