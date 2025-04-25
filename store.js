@@ -4,3 +4,6 @@ export const countStore = writable(0);
 export const savedCountsStore = writable([]);
 export const lastSavedCountStore = writable(null);
 export const doubleClickStore = writable(false);
+//color theme
+export const activeTab = writable('counter');
+export const themeColor = writable('#007bff');
