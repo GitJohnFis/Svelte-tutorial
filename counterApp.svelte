@@ -10,11 +10,18 @@
 //uncreate reactive state
 		// create a analytics tab
 	let activeTab = 'counter';
-	let showModal = false; //boolean
-	let modalMessage = ""; //string
+	let showModal = false; // boolean
+	let modalMessage = ""; // string
 	let loading = true;
 	let status = 'Initializing...';
 	let startupPromise;
+	// Store to control visibility of the subscribe popup
+	let yes = writable(false); // initialize as false (unchecked)
+	let showSubscribePopup = writable(false);
+	let showPopupTimeout;
+	let userEmail = writable('');
+
+	
 	// random fidget
 	// let m = { x: 0, y: 0 };
 	//  onpointermove={(event) => {
@@ -82,6 +89,33 @@
 		status = '⏳ Retrying...';
 		initiateApp();
 	}
+	
+	// function to Show the popup after a specific duration*enough usage* (e.g., 10 seconds)
+	function showPopupAfterDelay() {
+		setTimeout(() => {
+			showSubscribePopup.set(true);
+		}, 30000) // 10 seconds
+	
+	}
+	
+// closure of the popup function
+	function closePopup() {
+		showSubscribePopup.set(false);
+	}
+	// fuynction for subscribe button clicks + funtion to open the email client with the user's email adress pre-filled
+	function subscribe() {
+		const email = $userEmail.trim();
+		if($yes && email){
+			// Open a new page with user's email in the URL
+			// const encodeEmail = encodeURIComponent(userEmail);
+			const mailtoLink = `mailto:${userEmail.trim()}?subject=Subscription&body=I'm interested in recieving emails.`
+			window.open(mailtoLink, "_blank");//`/thank-you?email={encodedEmail}`
+			closePopup();
+		} else {
+			alert('Please agree and enter your email.');
+		}
+	}
+
 
 	
 	// Simulated promise (e.g., API call or setup process)
@@ -95,7 +129,7 @@
 	const max = svelteDerived(savedCountsStore, $counts => $counts.length ? Math.max(...$counts) : 0);
 	const min = svelteDerived(savedCountsStore, $counts => $counts.length ? Math.max(...$counts) : 0);
 
-	
+	showPopupAfterDelay();
 </script>
 {#await startupPromise}
 	<p style="display: flex; justify-content: center; align-items: center; height: 100vh;
@@ -177,6 +211,26 @@
 		</button>
 	</div>
 	{/if}
+		{#if $showSubscribePopup}
+			<div class="popup">
+				<button class="close-popup"on:click={closePopup}>X</button>
+			<label>
+				<input type="checkbox" bind:checked={$yes}/>
+				Yes! send me regular email spam
+			</label>
+
+				<div style="margin-top: 1rem;">
+						<input type="email" placeholder="Your email..." bind:value={$userEmail} />
+				</div>
+		{#if $yes}
+			<p>Thank you. We will bombard your inbox and sell your personal details.</p>
+		{:else}
+			<p>You must opt in to continue. If you're no paying, you're are the product.</p>
+		{/if}
+		<!-- disabled subscribe button if checkbox is unchecked -->
+		<button on:click={subscribe} disabled={$userEmail.trim() === ''}>Subscribe</button>
+			</div>
+		{/if}
 	</div>
 <!-- <div onkeydowncapture={(e) => alert(`<div> ${e.key}`)} role="presentation">
 	<input onkeydowncapture={(e) => alert(`<input> ${e.key}`)} />
@@ -207,6 +261,47 @@
     background-color: steelblue;
     color: white;
   }
+	.popup{
+	position: fixed;
+		top: 30%;
+		left: 50%;
+		transform: translate(-50%, -30%);
+		background: white;
+		padding: 2rem;
+		box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+		border-radius: 10px;
+		z-index: 1000;
+	}
+.close-popup{
+	position: absolute;
+		top: 10px;
+		right: 10px;
+		background: transparent;
+		border: none;
+		transition: opacity 0.2s ease; /* less visual exit */
+		color: #aaa;
+		opacity: 0.6; /* slightlyfadedthanaHo */
+	  font-weight: normal;
+		font-size: 0.9rem;
+		cursor: pointer;
+}
+	.close-popup:hover{
+		color: black;
+	}
+	.popup button:disabled {
+background-color: #ccc;
+	} 
+	.popup p {
+		  font-size: 1rem;
+    color: #333;
+	}
+	input[type=email]{
+	width: 100%;
+		padding: 0.5rem;
+		margin-top: 0.5rem;
+		border: 1px solid #ccc;
+		border-radius: 5px;
+	}
 	/*
 	fallback incase the emoji does not load
 	.loader {
