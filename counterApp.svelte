@@ -124,10 +124,10 @@
 	// 		resolve('ready'); // could be data too
 	// 	}, 3000); // 3 second fake delay
 	//  });
-	const total = svelteDerived(savedCountsStore, $counts => $counts.length);
-	const average = svelteDerived(savedCountsStore, $counts => $counts.length ? ($counts.reduce((a, b) => a + b, 0) / $counts.length).toFixed(2) : 0);
-	const max = svelteDerived(savedCountsStore, $counts => $counts.length ? Math.max(...$counts) : 0);
-	const min = svelteDerived(savedCountsStore, $counts => $counts.length ? Math.max(...$counts) : 0);
+	const total = svelteDerived(savedCountsStore, counts => counts.length);
+	const average = svelteDerived(savedCountsStore, counts => counts.length ? (counts.reduce((a, b) => a + b, 0) / counts.length).toFixed(2) : 0);
+	const max = svelteDerived(savedCountsStore, counts => counts.length ? Math.max(...counts) : 0);
+	const min = svelteDerived(savedCountsStore, counts => counts.length ? Math.min(...counts) : 0);
 
 	showPopupAfterDelay();
 </script>
