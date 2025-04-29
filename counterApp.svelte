@@ -2,21 +2,20 @@
      Rename the variable and try again or migrate by hand. -->
 <script>
 	//import stored state	
-	import { onMount, derived } from 'svelte';
-	import { countStore, savedCountsStore, lastSavedCountStore, themeColor, cards, sum, message, revealedCards } from "./store"; // add  card, sum, message
+	import { onMount } from 'svelte';
+	import { countStore, savedCountsStore, lastSavedCountStore, themeColor, cards, sum, message, revealedCards, activeTab, tabs } from "./store"; // add  card, sum, message
 	import CountButton  from './Countbutton.svelte';
-	import { get, writable, derived as svelteDerived } from 'svelte/store';
+	import { get, writable, derived as customDerived } from 'svelte/store';
   import { countStep, doubleClickEnabled, resetSettings  } from './settings.js';
 	import ThemeColors from './ThemeColors.svelte';
-	// import cardMapping from './cardMapping.js'; // your normal object, not a store
-	//import settings app js file
+	import Counter from './Counter.svelte';
+	import Settings from './Settings.svelte';
+	import Stats from './Stats.svelte';
 //uncreate reactive state
-		// create a analytics tab
-	let activeTab = 'counter';
-	let showModal = false; // boolean
-	let modalMessage = ""; // string
-	let loading = true;
-	let status = 'Initializing...';
+	let showModal = false; // Bln
+	let modalMessage = ""; // Str
+	let loading = true; // Bln
+	let status = 'Initializing...'; // Str
 	let startupPromise;
 	// Store to control visibility of the subscribe popup
 	let yes = writable(false); // initialize as false (unchecked)
@@ -24,18 +23,30 @@
 	let showPopupTimeout;
 	let userEmail = writable('');
 
+	// Blackjack game state
+	let deck = [];
+	let playerHand = [];
+	let dealerHand = [];
+	let playerSum = 0;
+	let dealerSum = 0;
+	let isGameOver = false;
+	let BJmessage = '';
 
-	// random fidget (Easter egg)
-	let flipped = writable(false);
+
+// Function to set the active tab
+function setActiveTab(tab) {
+  activeTab.set(tab);
+}
+
+	/* let flipped = writable(false);
 	let  blackjackHand = writable([]);
-	let currentCard = writable('');
-	// activation logic
+	let currentCard = writable(''); 
 	
 	const isAlive = writable(false);
 	const hasBlackjack = writable(false);
 	const gameWin = writable('Blackjack');
-	const myStore = writable(false); // ✅ use $myStore
-	 // Track which cards have been revealed
+	const myStore = writable(false); // ✅ use $myStore*/
+	
 	/* SFL */
 	// function revealCard(index){
 	// 	revealedCards.update(current => {
@@ -49,69 +60,7 @@
 	function exitSecretMode() {
 		secretModeUnlocked.set(false);
 	}
-	const totalBJ = svelteDerived(cards, $cards => {
-		let s = 0;
-		let aceCount = 0;
-		$cards.forEach(card => {
-			if(card === 1) {
-				s += 11;
-				aceCount++;
-			} else if (card > 10){
-				s += 10;
-			}else{
-				s += card;
-			}
-		});
-		// if the total is over 21 and we have aces counted as 11, subtract 10 or get 1 for each ace as needed
-	while(s > 21 && aceCount > 0) {
-		s -= 10;
-		aceCount--;
-	}
-		return s;
-	});
 	
-	const cardMapping = {
-	 1: { symbol: 'A', suit: '♠️'},
-	11: { symbol: 'J', suit: '♣️'},
-	12: { symbol: 'Q', suit: '♦️'},
-	13: { symbol: 'K', suit: '♥️'}
-	};
-	// '2', '3', '4', '5', '6', '7', '8', '9', '10' }
-// Starts (or restarts) the game by setting to given cards
-function startGame(){
-	isAlive.set(true);
-	hasBlackjack.set(false);
-	cards.set([getRandomCard(), getRandomCard()]);
-	// Optionally, also reset revealedCards (if used for flip animations)
-	revealedCards.set([]);
-	updateGame();
-}
-	
-function getRandomCard() {
-	return Math.floor(Math.random() * 13) + 1;
-}
-	// Draws a new card only if still (alive or no blackjack yet!)
-function newCard() {
-	if(get(isAlive) && !get(hasBlackjack)) {
-		cards.update(current => [...current, getRandomCard()]);
-		updateGame();
-	}
-}
-	// Update game state (reactively sets the message based on the derived total)
-function updateGame() {
-	const currentSum = get(totalBJ);
-// Blackjack game logic 
-	if(currentSum < 21) {
-		message.set('Do you want to draw a new card?');
-	} else if (currentSum === 21){
-	message.set(`Woohoo! You've got ${get(GameWin)}!`);
-	hasBlackjack.set(true);
-	} else {
-		message.set("You're out of the game!");
-		isAlive.set(false);
-	}
-}
-
 	
 // reactively lets you use $countStore
   $: document.title = `Count: ${countStore}`;
@@ -127,11 +76,112 @@ function updateGame() {
 // 	 }
 //  }
 
-	 // function drawCard() {
-		//  const card = cards[Math.floor(Math.random() * get(cards).length)]
-		//  const currentCard = card;
-		//  blackjackHand.push(card);
-	 // }
+// Initialize a new deck of cards
+function createDeck() {
+  const suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
+  const values = [
+    { rank: 'A', value: 11 }, { rank: '2', value: 2 }, { rank: '3', value: 3 },
+    { rank: '4', value: 4 },  { rank: '5', value: 5 }, { rank: '6', value: 6 },
+    { rank: '7', value: 7 },  { rank: '8', value: 8 }, { rank: '9', value: 9 },
+    { rank: '10', value: 10 },{ rank: 'J', value: 10 },{ rank: 'Q', value: 10 },
+    { rank: 'K', value: 10 }
+  ];
+  deck = [];
+  // Populate deck: each suit with all values
+  for (const suit of suits) {
+    for (const card of values) {
+      deck.push({ ...card, suit });
+    }
+  }
+  // Shuffle deck
+  shuffleDeck(deck);
+}
+
+// Shuffle the deck using Fisher–Yates algorithm
+function shuffleDeck(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+// Deal a card to the specified hand and update sums
+function dealCard(hand) {
+  const card = deck.pop();
+  hand.push(card);
+  calculateSums();
+}
+
+// Calculate the sums for player and dealer hands (handles aces)
+function calculateSums() {
+  // Helper to calculate sum of a hand, accounting for aces as 1 or 11
+  function sumHand(hand) {
+    let sum = 0;
+    let aceCount = 0;
+    for (const card of hand) {
+      sum += card.value;
+      if (card.rank === 'A') {
+        aceCount += 1;
+      }
+    }
+    // Adjust for aces if sum is over 21
+    while (sum > 21 && aceCount > 0) {
+      sum -= 10;
+      aceCount--;
+    }
+    return sum;
+  }
+  playerSum = sumHand(playerHand);
+  dealerSum = sumHand(dealerHand);
+}
+
+// Start a new game
+function startGame() {
+  deck = [];
+  playerHand = [];
+  dealerHand = [];
+  playerSum = 0;
+  dealerSum = 0;
+  isGameOver = false;
+  BJmessage = '';
+
+  createDeck();
+  // Initial dealing: 2 cards to player, 1 to dealer
+  dealCard(playerHand);
+  dealCard(dealerHand);
+  dealCard(playerHand);
+  calculateSums();
+}
+
+// Player draws a card
+function hit() {
+  if (isGameOver) return;
+  dealCard(playerHand);
+  if (playerSum > 21) {
+    isGameOver = true;
+    BJmessage = 'Player busts! Dealer wins.';
+  }
+}
+
+// Player stands, now dealer's turn
+function stand() {
+  if (isGameOver) return;
+  // Dealer draws until reaching 17 or higher
+  while (dealerSum < 17) {
+    dealCard(dealerHand);
+  }
+  // Determine winner
+  if (dealerSum > 21) {
+    BJmessage = 'Dealer busts! Player wins.';
+  } else if (dealerSum === playerSum) {
+    BJmessage = 'Push (tie).';
+  } else if (dealerSum > playerSum) {
+    BJmessage = 'Dealer wins.';
+  } else {
+    BJmessage = 'Player wins!';
+  }
+  isGameOver = true;
+}
 
 
 
@@ -220,10 +270,10 @@ function updateGame() {
 		}
 	}
 
-	const total = svelteDerived(savedCountsStore, counts => counts.length);
-	const average = svelteDerived(savedCountsStore, counts => counts.length ? (counts.reduce((a, b) => a + b, 0) / counts.length).toFixed(2) : 0);
-	const max = svelteDerived(savedCountsStore, counts => counts.length ? Math.max(...counts) : 0);
-	const min = svelteDerived(savedCountsStore, counts => counts.length ? Math.min(...counts) : 0);
+	const total =  customDerived(savedCountsStore, counts => counts.length);
+	const average =  customDerived(savedCountsStore, counts => counts.length ? (counts.reduce((a, b) => a + b, 0) / counts.length).toFixed(2) : 0);
+	const max =  customDerived(savedCountsStore, counts => counts.length ? Math.max(...counts) : 0);
+	const min =  customDerived(savedCountsStore, counts => counts.length ? Math.min(...counts) : 0);
 
 	let secretModeUnlocked = writable(false);
 
@@ -297,8 +347,8 @@ $: if($min == 7 && $max == 7 && parseFloat($average) ) {
   </div>
 <!-- Button controls -->
   <div class="blackjack-buttons">
-    <button class="blackjack-button" on:click={startGame} disabled={$isAlive}>New Game</button>
-    <button class="blackjack-button" on:click={newCard} disabled={!$isAlive || $hasBlackjack}>Draw New Card</button>
+    <button class="blackjack-button" on:click={startGame} disabled={isAlive}>New Game</button>
+    <button class="blackjack-button" on:click={newCard} disabled={!isAlive || hasBlackjack}>Draw New Card</button>
  <!-- if secret mode is active, show an exit/hide button -->
 		{#if $secretModeUnlocked}
 <button class="blackjack-button" on:click={exitSecretMode}>[Esc]</button>
@@ -309,9 +359,9 @@ $: if($min == 7 && $max == 7 && parseFloat($average) ) {
 	<ThemeColors />
 	<div style="color: var(--theme-text); background-color: var(--theme-bg); min-height: 100vh;">
 	<div style="margin-bottom: 1rem; ">
-	<button on:click={() => activeTab = 'counter'} class:active={activeTab === 'counter'} style="padding: 0.5rem 1rem; margin-right: 0.5rem; border: none; background-color: {activeTab === 'counter' ? 'steelblue' : 'lightgray'}; color: {activeTab === 'counter' ? 'white' : 'black'}; cursor: pointer; border-radius: 6px;">Counter</button>
-	<button on:click={() => activeTab = 'stats'} class:active={activeTab === 'stats'} style="padding: 0.5rem 1rem; margin-right: 0.5rem; border: none; background-color: {activeTab === 'stats' ? 'steelblue' : 'lightgray'}; color: {activeTab === 'stats' ? 'white' : 'black'}; cursor: pointer; border-radius: 6px;">Stats</button>
-		<button on:click={() => activeTab = 'settings'} class:active={activeTab === 'settings'} style="padding: 0.5rem 1rem; margin-right: 0.5rem; border: none; background-color: {activeTab === 'settings' ? 'steelblue' : 'lightgray'}; color: {activeTab === 'settings' ? 'white' : 'black'}; cursor: pointer; border-radius: 6px;">⚙️Settings</button>
+	<button on:click={() => activeTab.set('counter')} class:active={$activeTab === 'counter'} style="padding: 0.5rem 1rem; margin-right: 0.5rem; border: none; background-color: {$activeTab === 'counter' ? 'steelblue' : 'lightgray'}; color: {$activeTab === 'counter' ? 'white' : 'black'}; cursor: pointer; border-radius: 6px;">Counter</button>
+	<button on:click={() => activeTab.set('stats')} class:active={$activeTab === 'stats'} style="padding: 0.5rem 1rem; margin-right: 0.5rem; border: none; background-color: {$activeTab === 'stats' ? 'steelblue' : 'lightgray'}; color: {$activeTab === 'stats' ? 'white' : 'black'}; cursor: pointer; border-radius: 6px;">Stats</button>
+		<button on:click={() => activeTab.set('settings')} class:active={$activeTab === 'settings'} style="padding: 0.5rem 1rem; margin-right: 0.5rem; border: none; background-color: {$activeTab === 'settings' ? 'steelblue' : 'lightgray'}; color: {$activeTab === 'settings' ? 'white' : 'black'}; cursor: pointer; border-radius: 6px;">⚙️Settings</button>
 	</div>
 	<!-- App only renders after promise resolves -->
 {#if showModal}
@@ -319,7 +369,7 @@ $: if($min == 7 && $max == 7 && parseFloat($average) ) {
 {/if}
 	
 
-	{#if activeTab === 'counter'}
+	{#if $activeTab === 'counter'}
 <CountButton label="Count"
 	on:click={updateCount}
 	on:toggle={e => {
@@ -336,7 +386,7 @@ $: if($min == 7 && $max == 7 && parseFloat($average) ) {
 		reset
  </button>
 
-<button on:click={saveCount} style="background-color: var(--theme-button-hover); color: var(--theme-text);">
+<button on:click{saveCount} style="background-color: var(--theme-button-hover); color: var(--theme-text);">
 	save count
 </button>
 
@@ -350,7 +400,9 @@ $: if($min == 7 && $max == 7 && parseFloat($average) ) {
 	<p style="margin: 0;">Last saved counts: {$lastSavedCountStore}</p>
 {/if}
 	
-	{:else if activeTab === 'stats'}
+{:else if $activeTab === "Stats"}
+  <!-- Stats tab content -->
+  <!--<Stats />-->
 		<h2>Analytics</h2>
 		<p>Total saved: {$total}</p>
 		<p>Average: {$average}</p>
@@ -358,7 +410,7 @@ $: if($min == 7 && $max == 7 && parseFloat($average) ) {
 		<p>min: {$min}</p>
 		<button on:click={() => savedCountsStore.set([])}>Clear Saved Counts</button>
 
-		{:else if activeTab === 'settings'}
+		{:else if $activeTab === 'settings'}
 		<h2>Settings</h2>
 		<p>Here you can configure app settings</p>
 		<div style="margin-bottom: 1rem;">
