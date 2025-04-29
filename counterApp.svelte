@@ -30,19 +30,46 @@
 	let  blackjackHand = writable([]);
 	let currentCard = writable('');
 	// activation logic
-	let hasBlackjack = writable(false);
-	let isAlive = writable(false);
-	let GameWin = writable('Blackjack');
- const myStore = writable(false); // ✅ use $myStore
-	  // Track which cards have been revealed
 	
-	function revealCard(index){
-		revealedCardsupdate(current => {
-      const updated = [...current];
-      updated[index] = true;
-      return updated;
-		});
+	const isAlive = writable(false);
+	const hasBlackjack = writable(false);
+	const gameWin = writable('Blackjack');
+	const myStore = writable(false); // ✅ use $myStore
+	 // Track which cards have been revealed
+	/* SFL */
+	// function revealCard(index){
+	// 	revealedCards.update(current => {
+ //      const updated = [...current];
+ //      updated[index] = true;
+ //      return updated;
+	// 	});
+	// }
+	// New function: exit or hide secret mode,
+  // which resets secretModeUnlocked to false so that it may be reactivated later.
+	function exitSecretMode() {
+		secretModeUnlocked.set(false);
 	}
+	const totalBJ = svelteDerived(cards, $cards => {
+		let s = 0;
+		let aceCount = 0;
+		$cards.forEach(card => {
+			if(card === 1) {
+				s += 11;
+				aceCount++;
+			} else if (card > 10){
+				s += 10;
+			}else{
+				s += card;
+			}
+		});
+		// if the total is over 21 and we have aces counted as 11, subtract 10 or get 1 for each ace as needed
+	while(s > 21 && aceCount > 0) {
+		s -= 10;
+		aceCount--;
+	}
+		return s;
+	});
+	
 	const cardMapping = {
 	 1: { symbol: 'A', suit: '♠️'},
 	11: { symbol: 'J', suit: '♣️'},
@@ -50,46 +77,40 @@
 	13: { symbol: 'K', suit: '♥️'}
 	};
 	// '2', '3', '4', '5', '6', '7', '8', '9', '10' }
-
+// Starts (or restarts) the game by setting to given cards
 function startGame(){
 	isAlive.set(true);
 	hasBlackjack.set(false);
-	const firstCard = getRandomCard();
-		const secondCard = getRandomCard(); //const?
-	sum.set( firstCard + secondCard);
+	cards.set([getRandomCard(), getRandomCard()]);
+	// Optionally, also reset revealedCards (if used for flip animations)
+	revealedCards.set([]);
 	updateGame();
 }
 	
 function getRandomCard() {
-	return Math.floor(Math.random() * 13) 
+	return Math.floor(Math.random() * 13) + 1;
 }
+	// Draws a new card only if still (alive or no blackjack yet!)
 function newCard() {
 	if(get(isAlive) && !get(hasBlackjack)) {
-		const card = getRandomCard();
-		cards.update(c => [...c, card]);
-		sum.update(s => s + card);
+		cards.update(current => [...current, getRandomCard()]);
 		updateGame();
 	}
 }
+	// Update game state (reactively sets the message based on the derived total)
 function updateGame() {
-	const currentSum = get(sum);
+	const currentSum = get(totalBJ);
 // Blackjack game logic 
 	if(currentSum < 21) {
 		message.set('Do you want to draw a new card?');
 	} else if (currentSum === 21){
 	message.set(`Woohoo! You've got ${get(GameWin)}!`);
+	hasBlackjack.set(true);
 	} else {
 		message.set("You're out of the game!");
 		isAlive.set(false);
 	}
-	
 }
-
-
-
-
-
-
 
 	
 // reactively lets you use $countStore
@@ -98,21 +119,19 @@ function updateGame() {
 	
 
 
-// secretModeeUnclocked initialized
- function flipCard() {
-	 flipped = !flipped;
-	 if (!flipped){
-		 drawCard();
-	 }
- }
+// // secretModeeUnclocked initialized
+//  function flipCard() {
+// 	 flipped = !flipped;
+// 	 if (!flipped){
+// 		 drawCard();
+// 	 }
+//  }
 
-
-
-	 function drawCard() {
-		 const card = cards[Math.floor(Math.random() * get(cards).length)]
-		 const currentCard = card;
-		 blackjackHand.push(card);
-	 }
+	 // function drawCard() {
+		//  const card = cards[Math.floor(Math.random() * get(cards).length)]
+		//  const currentCard = card;
+		//  blackjackHand.push(card);
+	 // }
 
 
 
@@ -201,14 +220,6 @@ function updateGame() {
 		}
 	}
 
-
-	
-	// Simulated promise (e.g., API call or setup process)
-	// const startupPromise = new Promise((resolve) => {
-	// 	setTimeout(() => {
-	// 		resolve('ready'); // could be data too
-	// 	}, 3000); // 3 second fake delay
-	//  });
 	const total = svelteDerived(savedCountsStore, counts => counts.length);
 	const average = svelteDerived(savedCountsStore, counts => counts.length ? (counts.reduce((a, b) => a + b, 0) / counts.length).toFixed(2) : 0);
 	const max = svelteDerived(savedCountsStore, counts => counts.length ? Math.max(...counts) : 0);
@@ -248,9 +259,9 @@ $: if($min == 7 && $max == 7 && parseFloat($average) ) {
 
 <button on:click={startGame}>START GAME</button>
 <button on:click={newCard}>NEW CARD</button> -->
-			<div class="blackjack-game">
-  <h2 class="blackjack-title">🎉 Secret Blackjack Game 🎉</h2>
-
+	<div class="blackjack-game">
+	  <h2 class="blackjack-title">🎉 Secret Blackjack Game 🎉</h2>
+<!-- Card section -->
   <div class="blackjack-cards">
     {#each $cards as card, index}
       <div 
@@ -259,32 +270,40 @@ $: if($min == 7 && $max == 7 && parseFloat($average) ) {
   on:click={() => revealCard(index)} 
   style="--rotation: {$revealedCards[index] ? '180deg' : '0deg'}"
 >
+				<!-- Front of the card -->
         <div class="front">
           <div class="pattern"></div>
         </div>
+				<!-- Back of the card -->
         <div class="back">
           {#if cardMapping[card]}
             <span class="symbol">{cardMapping[card].symbol}</span>
+						<span class="suit">{cardMapping[card].suit}</span>
           {:else}
-            <span class="symbol">{card} ♣️</span>
+            <span class="symbol">{card}</span>
+						<span class="suit">♣️</span>span
           {/if}
         </div>
       </div>
     {/each}
   </div>
-
+<!-- Displaying game sum -->
   <div class="sum-display">
-    <p>Sum: {$sum}</p>
+    <p>Sum: {get(totalBJ)}</p>
   </div>
-
+<!-- Display of pllayer message -->
   <div class="message-display">
     <p>{$message}</p>
   </div>
-
+<!-- Button controls -->
   <div class="blackjack-buttons">
-    <button class="blackjack-button" on:click={startGame}>New Game</button>
-    <button class="blackjack-button" on:click={newCard}>Draw New Card</button>
-  </div>
+    <button class="blackjack-button" on:click={startGame} disabled={$isAlive}>New Game</button>
+    <button class="blackjack-button" on:click={newCard} disabled={!$isAlive || $hasBlackjack}>Draw New Card</button>
+ <!-- if secret mode is active, show an exit/hide button -->
+		{#if $secretModeUnlocked}
+<button class="blackjack-button" on:click={exitSecretMode}>[Esc]</button>
+	{/if}
+	</div>
 </div>
 {/if}
 	<ThemeColors />
@@ -493,7 +512,7 @@ background-color: #ccc;
 /* Blackjack Game Styles */
  .blackjack-game {
     /* styles here are automatically scoped */
-    background-color: #1c1c1c;
+    background-color: #1c1c1c; /*#FFFDFD; */
     border-radius: 12px;
     padding: 20px;
     width: 100%;
