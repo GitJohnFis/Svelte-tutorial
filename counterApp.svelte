@@ -1,11 +1,14 @@
+<!-- @migration-task Error while migrating Svelte code: can't migrate `$: currentThemeColor = $themeColor;` to `$derived` because there's a variable named derived.
+     Rename the variable and try again or migrate by hand. -->
 <script>
 	//import stored state	
 	import { onMount, derived } from 'svelte';
-	import { countStore, savedCountsStore, lastSavedCountStore, themeColor } from "./store";
+	import { countStore, savedCountsStore, lastSavedCountStore, themeColor, cards, sum, message, revealedCards } from "./store"; // add  card, sum, message
 	import CountButton  from './Countbutton.svelte';
 	import { get, writable, derived as svelteDerived } from 'svelte/store';
   import { countStep, doubleClickEnabled, resetSettings  } from './settings.js';
 	import ThemeColors from './ThemeColors.svelte';
+	// import cardMapping from './cardMapping.js'; // your normal object, not a store
 	//import settings app js file
 //uncreate reactive state
 		// create a analytics tab
@@ -21,19 +24,101 @@
 	let showPopupTimeout;
 	let userEmail = writable('');
 
+
+	// random fidget (Easter egg)
+	let flipped = writable(false);
+	let  blackjackHand = writable([]);
+	let currentCard = writable('');
+	// activation logic
+	let hasBlackjack = writable(false);
+	let isAlive = writable(false);
+	let GameWin = writable('Blackjack');
+ const myStore = writable(false); // ✅ use $myStore
+	  // Track which cards have been revealed
 	
-	// random fidget
-	// let m = { x: 0, y: 0 };
-	//  onpointermove={(event) => {
-	// m.x = event.clientX;
-	// m.y = event.clientY;
-	// }}
+	function revealCard(index){
+		revealedCardsupdate(current => {
+      const updated = [...current];
+      updated[index] = true;
+      return updated;
+		});
+	}
+	const cardMapping = {
+	 1: { symbol: 'A', suit: '♠️'},
+	11: { symbol: 'J', suit: '♣️'},
+	12: { symbol: 'Q', suit: '♦️'},
+	13: { symbol: 'K', suit: '♥️'}
+	};
+	// '2', '3', '4', '5', '6', '7', '8', '9', '10' }
+
+function startGame(){
+	isAlive.set(true);
+	hasBlackjack.set(false);
+	const firstCard = getRandomCard();
+		const secondCard = getRandomCard(); //const?
+	sum.set( firstCard + secondCard);
+	updateGame();
+}
+	
+function getRandomCard() {
+	return Math.floor(Math.random() * 13) 
+}
+function newCard() {
+	if(get(isAlive) && !get(hasBlackjack)) {
+		const card = getRandomCard();
+		cards.update(c => [...c, card]);
+		sum.update(s => s + card);
+		updateGame();
+	}
+}
+function updateGame() {
+	const currentSum = get(sum);
+// Blackjack game logic 
+	if(currentSum < 21) {
+		message.set('Do you want to draw a new card?');
+	} else if (currentSum === 21){
+	message.set(`Woohoo! You've got ${get(GameWin)}!`);
+	} else {
+		message.set("You're out of the game!");
+		isAlive.set(false);
+	}
+	
+}
+
+
+
+
+
+
+
 	
 // reactively lets you use $countStore
   $: document.title = `Count: ${countStore}`;
 	$: currentThemeColor = $themeColor;
+	
 
 
+// secretModeeUnclocked initialized
+ function flipCard() {
+	 flipped = !flipped;
+	 if (!flipped){
+		 drawCard();
+	 }
+ }
+
+
+
+	 function drawCard() {
+		 const card = cards[Math.floor(Math.random() * get(cards).length)]
+		 const currentCard = card;
+		 blackjackHand.push(card);
+	 }
+
+
+
+
+
+	 
 	function saveCount() {
 		const current = get(countStore);
 		savedCountsStore.update( arr => [...arr, current]);
@@ -129,12 +214,79 @@
 	const max = svelteDerived(savedCountsStore, counts => counts.length ? Math.max(...counts) : 0);
 	const min = svelteDerived(savedCountsStore, counts => counts.length ? Math.min(...counts) : 0);
 
+	let secretModeUnlocked = writable(false);
+
+$: if($min == 7 && $max == 7 && parseFloat($average) ) {
+		secretModeUnlocked.set(true);
+	}	
 	showPopupAfterDelay();
 </script>
+
+
 {#await startupPromise}
 	<p style="display: flex; justify-content: center; align-items: center; height: 100vh;
 						width: 100vw; font-size: 1.5rem;"><span class="spinner-animation">⏳</span> Loading counter app...</p>
+
 {:then status}
+		{#if $secretModeUnlocked}
+<!-- Secret Blackjack game here || Blackjack.svelte -->
+<!-- <h1>BlackJack</h1>
+
+<p id="message-el">{$message}</p>
+<p id="cards-el">
+    Cards: 
+    {#each $cards as card}
+        {#if cardMapping[card]}
+            {cardMapping[card].symbol} {cardMapping[card].suit}
+        {:else}
+            {card} ♣️
+        {/if}
+    {/each}
+</p>
+
+<p id="sum-el">Sum: {$sum}</p>
+
+<button on:click={startGame}>START GAME</button>
+<button on:click={newCard}>NEW CARD</button> -->
+			<div class="blackjack-game">
+  <h2 class="blackjack-title">🎉 Secret Blackjack Game 🎉</h2>
+
+  <div class="blackjack-cards">
+    {#each $cards as card, index}
+      <div 
+  class="blackjack-card" 
+  class:flipped={$revealedCards[index]} 
+  on:click={() => revealCard(index)} 
+  style="--rotation: {$revealedCards[index] ? '180deg' : '0deg'}"
+>
+        <div class="front">
+          <div class="pattern"></div>
+        </div>
+        <div class="back">
+          {#if cardMapping[card]}
+            <span class="symbol">{cardMapping[card].symbol}</span>
+          {:else}
+            <span class="symbol">{card} ♣️</span>
+          {/if}
+        </div>
+      </div>
+    {/each}
+  </div>
+
+  <div class="sum-display">
+    <p>Sum: {$sum}</p>
+  </div>
+
+  <div class="message-display">
+    <p>{$message}</p>
+  </div>
+
+  <div class="blackjack-buttons">
+    <button class="blackjack-button" on:click={startGame}>New Game</button>
+    <button class="blackjack-button" on:click={newCard}>Draw New Card</button>
+  </div>
+</div>
+{/if}
 	<ThemeColors />
 	<div style="color: var(--theme-text); background-color: var(--theme-bg); min-height: 100vh;">
 	<div style="margin-bottom: 1rem; ">
@@ -146,7 +298,7 @@
 {#if showModal}
 	<div class="modal">{modalMessage}</div>
 {/if}
-	<!--The pointer is at {Math.round(m.x)} x {Math.round(m.y)}-->
+	
 
 	{#if activeTab === 'counter'}
 <CountButton label="Count"
@@ -210,8 +362,8 @@
 			🔄 reset settings
 		</button>
 	</div>
-	{/if}
-		{#if $showSubscribePopup}
+	{:else if $showSubscribePopup}
+	
 			<div class="popup">
 				<button class="close-popup"on:click={closePopup}>X</button>
 			<label>
@@ -337,8 +489,155 @@ background-color: #ccc;
 		--theme-button: #007bff;
 		--theme-button-hover: #0056b3;
 	}
-</style>
 
+/* Blackjack Game Styles */
+ .blackjack-game {
+    /* styles here are automatically scoped */
+    background-color: #1c1c1c;
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    max-width: 600px;
+    margin: 2rem auto;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  }
+.blackjack-card.flipped {
+  transform: rotateY(180deg);
+}
+  .blackjack-title {
+    font-size: 2rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    color: #fff;
+  }
+
+  .blackjack-cards {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .blackjack-card {
+    background-color: #2c2c2c;
+    border-radius: 8px;
+    width: 60px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    cursor: pointer;
+  }
+
+.blackjack-card .front,
+.blackjack-card .back {
+  backface-visibility: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.blackjack-card .back {
+  transform: rotateY(180deg);
+}
+
+ .blackjack-card {
+  transition: transform 0.5s;
+  transform-style: preserve-3d;
+}
+
+.blackjack-card.flipped {
+  transform: rotateY(180deg);
+}
+
+.blackjack-card:hover {
+  transform: scale(1.05) rotateY(var(--rotation, 0deg));
+}
+
+  .blackjack-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 8px;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.2) 0%, transparent 80%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+
+  .blackjack-card:hover::after {
+    opacity: 1;
+  }
+
+  .blackjack-buttons {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .blackjack-button {
+    padding: 0.75rem 1.5rem;
+    background-color: #007bff;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+  }
+
+  .blackjack-button:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+  }
+	/* Message and Sum display */
+	.sum-display,
+.message-display {
+	background-color: white;
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  margin: 0.5rem 0;
+  font-size: 1.2rem;
+}
+
+	/* {
+	background: white;
+    color: black;
+    padding: 1em;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    width: 80px;
+    height: 120px;
+    font-size: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+	} */
+
+	.buttons button {
+		margin: 0 0.5rem;
+		padding: 0.5rem 1rem;
+		background-color: steelblue;
+		color: white;
+		border: none;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.buttons button:hover {
+		background-color: darkblue;
+	}
+</style>
 
 /*
 
